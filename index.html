@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Game Mabar 2D</title>
+
+<style>
+body{
+    margin:0;
+    overflow:hidden;
+    background:#111;
+    font-family:Arial;
+}
+
+#game{
+    width:100vw;
+    height:100vh;
+    position:relative;
+    background:
+    linear-gradient(#1b1b1b 1px, transparent 1px),
+    linear-gradient(90deg,#1b1b1b 1px, transparent 1px);
+    background-size:40px 40px;
+}
+
+.player{
+    width:40px;
+    height:40px;
+    border-radius:10px;
+    position:absolute;
+    transition:0.05s linear;
+}
+
+.name{
+    position:absolute;
+    top:-20px;
+    left:-10px;
+    color:white;
+    font-size:12px;
+    width:60px;
+    text-align:center;
+}
+
+#info{
+    position:fixed;
+    top:10px;
+    left:10px;
+    color:white;
+    z-index:999;
+    background:#000a;
+    padding:10px;
+    border-radius:10px;
+}
+</style>
+</head>
+<body>
+
+<div id="info">
+WASD / Arrow = Gerak<br>
+Game Mabar Online
+</div>
+
+<div id="game"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+const socket = io();
+
+const game = document.getElementById("game");
+
+let players = {};
+let myId = null;
+
+const me = {
+    x: 200,
+    y: 200,
+    color: randomColor(),
+    name: "Player"
+};
+
+function randomColor(){
+    return `hsl(${Math.random()*360},80%,60%)`;
+}
+
+function createPlayer(id,data){
+
+    const div = document.createElement("div");
+    div.className = "player";
+    div.id = id;
+    div.style.background = data.color;
+
+    const name = document.createElement("div");
+    name.className = "name";
+    name.innerText = data.name;
+
+    div.appendChild(name);
+
+    game.appendChild(div);
+
+    players[id] = div;
+
+    updatePlayer(id,data);
+}
+
+function updatePlayer(id,data){
+
+    const player = players[id];
+
+    if(!player) return;
+
+    player.style.left = data.x + "px";
+    player.style.top = data.y + "px";
+}
+
+function removePlayer(id){
+    if(players[id]){
+        players[id].remove();
+        delete players[id];
+    }
+}
+
+socket.on("connect", ()=>{
+
+    myId = socket.id;
+
+    socket.emit("newPlayer", me);
+});
+
+socket.on("allPlayers",(serverPlayers)=>{
+
+    for(let id in serverPlayers){
+
+        if(!players[id]){
+            createPlayer(id,serverPlayers[id]);
+        }
+    }
+});
+
+socket.on("playerJoined",(data)=>{
+
+    createPlayer(data.id,data);
+});
+
+socket.on("playerMoved",(data)=>{
+
+    updatePlayer(data.id,data);
+});
+
+socket.on("playerLeft",(id)=>{
+
+    removePlayer(id);
+});
+
+document.addEventListener("keydown",(e)=>{
+
+    const speed = 10;
+
+    if(e.key==="w" || e.key==="ArrowUp") me.y -= speed;
+    if(e.key==="s" || e.key==="ArrowDown") me.y += speed;
+    if(e.key==="a" || e.key==="ArrowLeft") me.x -= speed;
+    if(e.key==="d" || e.key==="ArrowRight") me.x += speed;
+
+    updatePlayer(myId,me);
+
+    socket.emit("move",me);
+});
+</script>
+
+</body>
+</html>

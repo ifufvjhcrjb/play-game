@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Game Mabar 2D</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Game Mabar Android</title>
 
 <style>
+
 body{
     margin:0;
     overflow:hidden;
@@ -17,9 +19,11 @@ body{
     width:100vw;
     height:100vh;
     position:relative;
+
     background:
     linear-gradient(#1b1b1b 1px, transparent 1px),
     linear-gradient(90deg,#1b1b1b 1px, transparent 1px);
+
     background-size:40px 40px;
 }
 
@@ -41,30 +45,47 @@ body{
     text-align:center;
 }
 
-#info{
+#controls{
     position:fixed;
-    top:10px;
-    left:10px;
-    color:white;
+    bottom:20px;
+    left:20px;
     z-index:999;
-    background:#000a;
-    padding:10px;
-    border-radius:10px;
 }
+
+#controls button{
+    width:70px;
+    height:70px;
+    margin:5px;
+    border:none;
+    border-radius:20px;
+    font-size:30px;
+    background:#ffffff22;
+    color:white;
+}
+
 </style>
 </head>
 <body>
 
-<div id="info">
-WASD / Arrow = Gerak<br>
-Game Mabar Online
-</div>
-
 <div id="game"></div>
+
+<div id="controls">
+
+    <button ontouchstart="move(0,-20)">⬆️</button>
+
+    <div>
+        <button ontouchstart="move(-20,0)">⬅️</button>
+        <button ontouchstart="move(20,0)">➡️</button>
+    </div>
+
+    <button ontouchstart="move(0,20)">⬇️</button>
+
+</div>
 
 <script src="/socket.io/socket.io.js"></script>
 
 <script>
+
 const socket = io();
 
 const game = document.getElementById("game");
@@ -73,10 +94,10 @@ let players = {};
 let myId = null;
 
 const me = {
-    x: 200,
-    y: 200,
-    color: randomColor(),
-    name: "Player"
+    x:200,
+    y:200,
+    color:randomColor(),
+    name:"Player"
 };
 
 function randomColor(){
@@ -85,12 +106,17 @@ function randomColor(){
 
 function createPlayer(id,data){
 
+    if(players[id]) return;
+
     const div = document.createElement("div");
+
     div.className = "player";
     div.id = id;
+
     div.style.background = data.color;
 
     const name = document.createElement("div");
+
     name.className = "name";
     name.innerText = data.name;
 
@@ -114,6 +140,7 @@ function updatePlayer(id,data){
 }
 
 function removePlayer(id){
+
     if(players[id]){
         players[id].remove();
         delete players[id];
@@ -124,16 +151,16 @@ socket.on("connect", ()=>{
 
     myId = socket.id;
 
-    socket.emit("newPlayer", me);
+    createPlayer(myId,me);
+
+    socket.emit("newPlayer",me);
 });
 
 socket.on("allPlayers",(serverPlayers)=>{
 
     for(let id in serverPlayers){
 
-        if(!players[id]){
-            createPlayer(id,serverPlayers[id]);
-        }
+        createPlayer(id,serverPlayers[id]);
     }
 });
 
@@ -144,6 +171,11 @@ socket.on("playerJoined",(data)=>{
 
 socket.on("playerMoved",(data)=>{
 
+    if(!players[data.id]){
+
+        createPlayer(data.id,data);
+    }
+
     updatePlayer(data.id,data);
 });
 
@@ -152,19 +184,16 @@ socket.on("playerLeft",(id)=>{
     removePlayer(id);
 });
 
-document.addEventListener("keydown",(e)=>{
+function move(dx,dy){
 
-    const speed = 10;
-
-    if(e.key==="w" || e.key==="ArrowUp") me.y -= speed;
-    if(e.key==="s" || e.key==="ArrowDown") me.y += speed;
-    if(e.key==="a" || e.key==="ArrowLeft") me.x -= speed;
-    if(e.key==="d" || e.key==="ArrowRight") me.x += speed;
+    me.x += dx;
+    me.y += dy;
 
     updatePlayer(myId,me);
 
     socket.emit("move",me);
-});
+}
+
 </script>
 
 </body>
